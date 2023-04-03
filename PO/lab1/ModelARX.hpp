@@ -30,6 +30,9 @@ public:
 
     void set_delay(int delay);
     void set_deviation(double diviation);
+
+    void set_seed(unsigned int seed);
+
     double symuluj(double);
 
     ModelARX(
@@ -53,6 +56,8 @@ class Testy_ModelARX{
     static void test_ModelARX_skokJednostkowy_1();
     static void test_ModelARX_skokJednostkowy_2();
     static void test_ModelARX_skokJednostkowy_3();
+
+    static void test_ModelARX_skokJednostkowy_3_Szum();
 
 public:
     static void test_ModelARX_all();

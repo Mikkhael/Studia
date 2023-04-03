@@ -1,7 +1,6 @@
 #include "ModelARX.hpp"
 
 #include <random>
-#include <algorithm>
 
 
 void ModelARX::set_A(const std::vector<double>& A){
@@ -32,6 +31,11 @@ void ModelARX::set_deviation(double deviation){
     noise_distribution = std::normal_distribution<double>{0, deviation};
 }
 
+void ModelARX::set_seed(unsigned int seed)
+{
+	gen.seed(seed);
+}
+
 template<typename Iter1, typename Iter2>
 static double dot_product( Iter1 beg1, const Iter1 end1, Iter2 beg2){
     double res = 0;
@@ -54,10 +58,8 @@ double ModelARX::symuluj(double u){
     rotate_deque(delay_buffer, u);
 
     double y = generate_next_noise();
-    // y += dot_product(m_B.begin(), m_B.end(), in_buffer.begin());
-    // y -= dot_product(m_A.begin(), m_A.end(), out_buffer.begin());
-    y += std::inner_product(m_B.begin(), m_B.end(), in_buffer.begin(), 0.0);
-    y -= std::inner_product(m_A.begin(), m_A.end(), out_buffer.begin(), 0.0);
+    y += dot_product(m_B.begin(), m_B.end(), in_buffer.begin());
+    y -= dot_product(m_A.begin(), m_A.end(), out_buffer.begin());
     rotate_deque(out_buffer, y);
 
     return y;
@@ -264,11 +266,50 @@ void Testy_ModelARX::test_ModelARX_skokJednostkowy_3()
 	}
 }
 
+void Testy_ModelARX::test_ModelARX_skokJednostkowy_3_Szum()
+{
+	//Sygnatura testu:
+	std::cerr << "ModelARX (-0.4, 0.2 | 0.6, 0.3 | 2 | 0.1 ) -> test skoku jednostkowego 3 z Szumem: ";
+	try
+	{
+		// Przygotowanie danych:
+		ModelARX instancjaTestowa({ -0.4,0.2 }, { 0.6, 0.3 }, 2, 0.1);
+		instancjaTestowa.set_seed(123);
+		constexpr size_t LICZ_ITER = 30;
+		std::vector<double> sygWe(LICZ_ITER);      // pobudzenie modelu, 
+		std::vector<double> spodzSygWy(LICZ_ITER); // spodziewana sekwencja wy
+		std::vector<double> faktSygWy(LICZ_ITER);  // faktyczna sekwencja wy
+
+		// Symulacja skoku jednostkowego w chwili 1. (!!i - daje 1 dla i != 0);
+		for (int i = 0; i < LICZ_ITER; i++)
+			sygWe[i] = !!i;
+		spodzSygWy = { -0.057, 0.147, 0.181, 0.740, 1.312, 1.272, 1.306, 0.990, 1.006, 1.000, 0.951, 1.187, 1.266, 1.063, 1.245, 1.309, 1.092, 1.063, 1.049, 1.277, 1.193, 0.932, 0.956, 1.227, 1.380, 1.110, 0.936, 0.990, 1.076, 1.102 };
+
+		// Symulacja modelu:
+		for (int i = 0; i < LICZ_ITER; i++)
+			faktSygWy[i] = instancjaTestowa.symuluj(sygWe[i]);
+
+		// Weryfikacja poprawności i raport:
+		if (porownanieSekwencji(spodzSygWy, faktSygWy))
+			std::cerr << "OK!\n";
+		else
+		{
+			std::cerr << "FAIL!\n";
+			raportBleduSekwencji(spodzSygWy, faktSygWy);
+		}
+	}
+	catch (...)
+	{
+		std::cerr << "INTERUPTED! (niespodziwany wyjatek)\n";
+	}
+}
+
 void Testy_ModelARX::test_ModelARX_all(){
     test_ModelARX_brakPobudzenia();
 	test_ModelARX_skokJednostkowy_1();
 	test_ModelARX_skokJednostkowy_2();
 	test_ModelARX_skokJednostkowy_3();
+	test_ModelARX_skokJednostkowy_3_Szum();
 }
 
 #endif //DEBUG
